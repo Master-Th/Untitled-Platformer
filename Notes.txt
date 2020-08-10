@@ -1,0 +1,182 @@
+
+"""
+Effect attributes:
+	Spawn an item?
+	What happens to affected?
+	Affected zones?
+	Splash?
+	How long lasting?
+	
+Item attributes:
+	HP
+	Creature interaction
+	Possible Effects and conditions to trigger
+	
+	
+	
+	
+
+"""
+
+
+
+"""
+This is how every frame decision is to be made. The decisions made will be abstracted to higher level decisions to target a creature, avoid dangers, et cetera. The goals chosen will be what the neural network is taught to recognize and therefore the specific creature's approach to any given goal will be trained, but their temperament, values, and situational awareness will affect these decisions, giving every individual in this game a unique personality and fighting style, instead of a world of hats situation.
+
+Category: common
+
+0	->	Idle/no new action
+
+Category: Attack/item interaction
+
+1	->	Melee attack
+2	->	Ranged attack
+3	->	Shield attack
+4	->	Misc attack
+5	->	Open items/configure items
+6	->	Wall latch, bar hang, anchor, etc.; requires that a creature has the ability either through equipment or a class feature, for which a check will be made.
+7	->	Environment interaction
+
+Category: Movement L/R
+
+1	->	Lean/glide/crawl L/R
+2	->	Accelerated/assisted motion L/R
+
+Category: Movement U/D
+
+1	->	Normal jump/float
+2	->	Item-assisted lift/descend
+2	->	Descend/crouch
+
+Category: Point
+
+1	->	Point item
+2	->	Look
+3	->	Look and point
+
+
+Category: Communication:
+
+1	->	Sub-category: Communication/signal: General
+_________________________
+	1	->	Signal 1
+	2	->	Signal message 2
+	. . .
+	n	->	Signal n
+
+2	->	Sub-category: Communication/signal: Kin-exclusive
+_________________________
+	1	->	Signal 1
+	2	->	Signal message 2
+	. . .
+	n	->	Signal n
+
+3	->	Sub-category: Communication/signal: Environment trigger
+_________________________
+	1	->	#TRIGGER 1
+	2	->	#TRIGGER 2
+	. . .
+	n	->	Signal n
+_________________________
+
+Category: Evaluate Creature
+1	->	Increase reward for Kill/Protection of creature X
+2	->	Increase reward for Capture/Preservation of creature X
+3	->	Increase perception of danger/safety for creature X
+
+===============================================================
+===============================================================
+===============================================================
+
+Now the goals. If these change during the game, as they will based on new information they get, they may be trained to ignore the change, or to plan to adapt and be indecisive.
+
+However, these are mostly static. The changes might be when a creature realizes a so-called ally turns out to be hostile or traitorous, vice versa, if their leader signals to surrender, or they realize their death is imminent and so decide to maximize destruction of the enemy.
+
+Tactical attributes:
+
+Pacifist --- Conflict-assertive spectrum
+	1.0: Kill the enemy, cut up and freeze their children, eat their pets, and shoot the messenger
+	0.9: Kill the enemy
+	0.8: Kill the enemy, but spare those worthy of it
+	0.7: Kill the enemy if reason otherwise exists to do so
+	0.6: Use force to defuse conflicts and protect your interests
+	0.5: Defer to the other tactical aspects of the situation
+	0.4: Compromise to disarm opponents initially
+	0.3: Try to resolve the conflict without killing if possible, but prioritize the innocent.
+	0.2: De-escalate the situation if it can be salvaged, even at great personal cost.
+	0.1: Only kill the specific individuals responsible for the conflict
+	0.0: Kill no one, even if they ate your cat and are swinging an axe at you
+	
+The attack mechanics and weapons will allow for lethal and nonlethal fighting techniques. If an enemy is hated more than the pacifistic threshold of this creature, the creature's attacks will attempt to kill.
+
+Collateral damage admission: High --- Low
+
+	1.0: Let me cut you a deal: your king's severed head for our king's heart and liver... it's getting time for revolution anyway...
+	0.0: Just because I'm a bit schizophrenic doesn't mean my friends are any less important.
+
+Just as you might imagine. Allies are always important. Sometimes you have to choose between launching an AOE that can take out seven enemies and one ally at once, and that's a judgment call you have to make.
+
+
+
+	
+This skews the creature to prefer either mounting an assault or defending allies/weak points when called to participate in the fight. In general, defense will be incentivized to keep damage from valued entities, though keeping damage from teammates or allies in any capacity counts as well, and even aggressive creatures assist attackers when convenient.
+
+Pragmatic --- Unfettered
+
+	1.0: Being possessed is no excuse to be somewhere you aren't supposed to be... smh
+	0.9: Let the police handle this. Your life is more valuable.
+	0.8: Would anything important break if we lose? ... No, I said something IMPORTANT.
+	0.7: Am I necessary here?
+	0.6: Am I useful here?
+	0.5: This wasn't part of the job description! What am I supposed to do?
+	0.4: Sigh... I sure hope this will be worth it.
+	0.3: My buddies rely on me to help them.
+	0.2: I wouldn't give my credit card and laptop to a mugger as soon as asked for them. Perhaps size them up first... and check if they actually have weapons on them. Even if so, perhaps I can use my belt to gain the upper hand. Oh well, I'll figure it out.
+	0.1: Terrorism and war thrives on people giving in to threats. Better to die for a greater cause than to save your life enabling evil.
+	0.0: Did you just assume my gender?!
+
+This describes, when called upon, whether aggressive or defensive, how strongly their assault or protective instincts go, pit against the impulse to retreat. In other words, if a defensive target is valuable enough, or the object of the conflict valuable enough, it will involve even the more pragmatic creatures, who only care about bettering their own situation, whereas less high stakes conflicts will generally only take hold on the hard-headed among them.
+
+So, let's imagine a creature has:
+Pacifist (0.2)
+Unfettered (0.1)
+Assault (0.8)
+
+This creature would generally use nonlethal means to subdue an adversary, to the bitter end, with great offensive energy. If the adversary, however, turns out to make a great effort to extend a truce, the situation is extremely hopeless, or the only thing the creature has to do right now is defensive in nature, they would take on different behaviours to fit that.
+
+Now comes the assessment of a goal. The following are examples of goals:
+
+-- Attack target
+-- Make sure attack misses target
+-- Defend target
+-- Evade target
+-- Move to location
+-- Area denial
+
+With few exceptions, friendly fire does not exist. This brings us to the inverted equivalent of goals: constraints. These are penalties for something that happens which is to be used in training.
+
+-- Ally/target dies
+-- Ally/target is attacked
+-- Ally/target begins to turn on you
+
+-- Creature takes damage
+-- Creature dies
+
+-- Attack misses target
+
+-- Mission objective regresses
+
+So naturally, the temperament scores will factor into goals. for example, if an attack misses, the attacking target goal will penalize actions leading up to it, but not by much if, for example, the creature was defensive to begin with, their primary goal assigned to them was area denial (thus may have been successful), et cetera.
+
+
+Due to how many parameters exist, it is tempting to wonder whether this will be an issue when training. However, the machine learning of a platformer is necessarily slow due to the real-time simulation slowing generation of training data. Higher specificity of training takes advantage of this effect, so more learning occurs per frame of runtime.
+
+When the game is run, only a few important goals will actually be chosen at a time per creature, and may periodically choose random side goals to check up on; additionally, communication can occur when a creature notices a significant assistance or hindrance due to an ally's action, which may not necessarily have served the creature's primary interest but had a serendipidous effect.
+
+The inputs to these problems should be simple as possible while encompassing all relevant information. Therefore, all creatures and blocks within view of a creature may be factored into a creature 
+
+To avoid overtraining, a creature may be placed in different environments or with different weapons, et cetera, to successfully navigate variance. However, overtraining may be also used strategically, as for a creature to be unfamiliar with certain fighting styles, environments, and dangers, may be intentionally added to provide fallibility.
+
+Another aspect of the training may be for the creature to be aware of specific weapons and effects affect their course of action, perhaps how to aim guns with different bullet patterns and trajectories.
+
+"""
