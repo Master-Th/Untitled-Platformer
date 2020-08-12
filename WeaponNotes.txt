@@ -1,0 +1,29 @@
+import Effects, Items
+
+"""
+
+Dystopia, Feywild, Sewers
+
+Weapon types:
+
+L0:		Base feature, throw/spit, kick/punch, Hand-block
+L1: 	Feature, Rib slingshot, Disembodied leg, ribcage shield
+L2 light:		Other Feature, nail/staple gun
+L2 heavy:		
+
+Only one special weapon allowed; only L1 weapons allowed
+Sp:		Staff focus (Feywild), Utility rifle (Dystopia), mutant pet (Feywild), Hazmat crash suit (Dystopia)
+Quick weapons: idk
+Qk:		Handheld magic channel (Dystopia), Endowed blowgun (Feywild), Combat prosthetics (Dystopia), Cockroach wings (Feywild)
+Hv:		Staff focus (Feywild)
+
+
+Feywild:	Each weapon attained from here will deplete magic faster after 2
+			Special weapons require leaving behind other Feywild weapons
+
+Dystopia:	Only allow you to have 2 combat items at a time.
+Feywild: Will freak out if you have non-feywild weapons
+[MGC,	RNG,	MLE,	SHD]
+[]
+
+"""

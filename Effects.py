@@ -1,9 +1,6 @@
-import numpy
+import numpy, Items
 
-class Item:
-	def __init__(self,Weight,HP,interactEffect,Effects):
-		self.Weight = Weight
-		self.Actions = Actions
+
 		
 class Effect: # Within the context of creature and weapon interactions with each other and the environment
 	def __init__(self,Sim,itemSpawns,effect,zone,splash=0,stack=1,boundToObject=None,endCondition=None,effectConfig=None,setup=None):

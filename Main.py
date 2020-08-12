@@ -1,12 +1,12 @@
-import pygame, threading, random, time, sys, math, loadedDefaults, Effects
+import pygame, threading, random, time, sys, math, loadedDefaults, Effects, Items
 
 Trenchcoat = pygame.image.load("Trenchcoat.png")
 Generic_Pants = pygame.image.load("Generic_pants.png")
 Soviet_Head = pygame.image.load("Head.png")
 
-Trenchcoat = loadedDefaults.spriteSheet("Trenchcoat.png")
-Generic_Pants = loadedDefaults.spriteSheet("Generic_pants.png")
-Soviet_Head = loadedDefaults.spriteSheet("Head.png")
+Trenchcoat = loadedDefaults.spriteSheet("Trenchcoat.png",frmDims = [10,20])
+Generic_Pants = loadedDefaults.spriteSheet("Generic_pants.png", frmDims = [10,20])
+Soviet_Head = loadedDefaults.spriteSheet("Head.png", frmDims = [10,20])
 
 
 class saveFile:
@@ -42,6 +42,8 @@ class Sim:
 		self.keysDown = []
 		self.effectQueue = [loadedDefaults.testEffect]
 		self.activeEffects = []
+		self.items = []
+		self.itemQueue = []
 		self.Sprites = [pygame.image.load("Block.png")]	# Hope to load from map data
 		self.Res = [500,500]									# screen resolution
 		self.cameraPos = [0,0]							# Camera scroll location
@@ -137,7 +139,9 @@ class Sim:
 				#self.Window.blit("Custom materialization")
 				
 			elif(self.Mode == self.Modes["In-game"]):
+					self.effectQueue = [i for i in self.effectQueue if i]
 					while(len(self.effectQueue)):
+						print(self.effectQueue)
 						self.effectQueue[0].Effect([self])
 						self.activeEffects.append(self.effectQueue.pop(0))
 					for effect in [ sf for sf in list(reversed(range(len(self.activeEffects)-1)))]:
@@ -227,14 +231,22 @@ class Sim:
 		
 		
 	def physUpdate(self):
-		for Creature in self.creatures:
+		for item in self.itemQueue:
+			self.items.append(item[0]())
+			self.items[-1].pos = item[1]
+			for effect in self.items[-1].Params["Effects"]:
+				if(effect):
+					self.effectQueue.append(effect)
+					effect.itemBound = item
+			
+		for Creature in self.creatures + self.items:
 			#print(Creature.pos,self.cameraPos)
 			Creature.lastPos = Creature.pos
 			Creature.pos = [Creature.pos[i] + Creature.velocity[i] for i in range(2)]
 			Creature.velocity = [Creature.velocity[i] + Creature.accel[i] for i in range(2)]
 			Creature.accel = [Creature.accel[i] * Creature.airDense for i in range(2)]
-			if(not (Creature.grounded or Creature.latched) or True):
-				Creature.velocity[1] += 4.0
+
+			if(not (Creature.grounded or Creature.latched) or True): Creature.velocity[1] += 4.0
 			if(Creature.grounded): Creature.velocity[0] = Creature.accel[0] = 0.0
 			if(Creature.latched): Creature.velocity = Creature.accel = [0.0,0.0]
 
@@ -270,22 +282,13 @@ class Sim:
 				for j in [mins[1],maxes[1]]:
 					if(self.Map[i][j] == 1):
 						pass
-							
 
-
-#				for x in range(mins[0],maxes[0]+1):
-#					for y in range(mins[1],maxes[1]+1):
-#						self.Window.blit(pygame.transform.scale(pygame.image.load("Block.png"),self.zoom),[self.zoom[1]*x-self.cameraPos[0],self.zoom[0]*y-self.cameraPos[1]])
 				print(mins, maxes)
-				#Creature.lmins = mins
-				#Creature.lmaxes = maxes
 				
-		for Creature in self.creatures:
+		for Creature in self.creatures + self.items:
 			for layer in Creature.spriteLayers:
-				#self.Window.blit(pygame.transform.scale(layer.Sheet, [a*self.SF for a in layer.sRes]),
-				 #[Creature.pos[i] + self.zoom[i]*Creature.sprOffset[i] for i in range(2)],(self.SF*10*Creature.frm,20*Creature.idx,self.SF*10,self.SF*20))
 				if(Creature.velocity[0] < 0):
-				 	self.Window.blit(pygame.transform.flip(pygame.transform.scale(layer.Sheet,[a*self.SF for a in layer.sRes]),True,False),[self.Res[i]/2 + self.zoom[i]*Creature.sprOffset[i] for i in range(2)],(1920*4-self.SF*10*(Creature.frm+1),20*Creature.idx,self.SF*10,self.SF*20))
+				 	self.Window.blit(pygame.transform.flip(pygame.transform.scale(layer.Sheet,[a*self.SF for a in layer.sRes]),True,False),[self.Res[i]/2 + self.zoom[i]*Creature.sprOffset[i] for i in range(2)],(1920*4-self.SF*layer.frmDims[0]*(Creature.frm+1),frmDims[1]*Creature.idx,self.SF*frmDims[0],self.SF*frmDims[1]))
 				else:
 					self.Window.blit(pygame.transform.scale(layer.Sheet,[a*self.SF for a in layer.sRes]),
 				 [self.Res[i]/2 + self.zoom[i]*Creature.sprOffset[i] for i in range(2)],(self.SF*10*Creature.frm,self.SF*20*Creature.idx,self.SF*10,self.SF*20))
@@ -325,7 +328,7 @@ class Sim:
 				
 				
 			if(Move["Item"] != 0):
-				if(Move["Item"] == 1): self.effectQueue.append(Creature.weapons[0].primary)		# Primary attack with active weapon; usually a heavier attack
+				if(Move["Item"] == 1): self.effectQueue.append(Creature.Items["Primary-Equipped"].Params["Interact"]["action-1"]([Creature.Items["Primary-Equipped"],self]))		# Primary attack with active weapon; usually a heavier attack
 				elif(Move["Item"] == 2): self.effectQueue.append(Creature.weapons[0].secondary)	# Secondary attack with active weapon; usually a quick jab
 				elif(Move["Item"] == 3):
 					self.effectQueue.append(Creature.weapons[1].secondary) # Quick attack with secondary weapon when the primary weapon is two-handed; if both are one-handed or it is hybrid, a primary attack. If a focus weapon, it is the tertiary attack.
@@ -380,6 +383,12 @@ class Creature:
 				   			"Signal": 0,
 				   			"Itemch": 0,
 						}
+		
+		self.Items = {
+			"Primary-Equipped": Items.GameItems["Grenade-Launcher"]()
+		}
+		
+		#self.ActiveItems = [Items.Item(["Grenade"])]
 
 		if(self.is_player): self.lastFrame = self.Response
 		
@@ -448,6 +457,7 @@ class Creature:
 				elif(pygame.K_d in self.Sim.keysDown): self.Response["Point"] = 2
 				elif(pygame.K_a in self.Sim.keysDown): self.Response["Point"] = 4
 				else: self.Response["Point"] = 3
+			elif(pygame.K_1 in self.Sim.keysDown): self.Response["Item"] = 1
 			else: self.Response["Point"] = 0
 				
 			

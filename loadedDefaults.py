@@ -1,12 +1,17 @@
-import pygame, Effects,loadedDefaults
+import pygame, Effects,loadedDefaults, Items
 
 class spriteSheet:
-	def __init__(self,pyGLayer,sRes = [1920,1080]):
+	def __init__(self,pyGLayer,sRes = [1920,1080],frmDims = [10,10]):
 		self.sRes = sRes
+		self.Sheet = pygame.image.load(pyGLayer)
+		
+class Item(spriteSheet):
+	def __init__(self,pyGLayer,sRes = [1920,1080]):
+		self,sRes = sRes
 		self.Sheet = pygame.image.load(pyGLayer)
 
 class HumanoidSprites(spriteSheet):
-	def __init__(self, pyGLayer,sRes = [1920,1080]):
+	def __init__(self, pyGLayer,sRes = [1920,1080],frmDims = [10,10]):
 		self.Sheet = pygame.image.load(pyGLayer)
 		self.sRes = sRes
 		self.Animations = {
@@ -76,7 +81,11 @@ f[1].toggle0 = 0
 f[1].Current = None
 print(f)
 f[1].activeScript = [
-	["Talk",loadedDefaults.DefaultTextbox,loadedDefaults.NPC_MEME,"Jim 8 Myk"],
-	["Talk",loadedDefaults.DefaultTextbox,loadedDefaults.NPC_MEME_ANGRY,"Fake news!"],
+	["Talk",loadedDefaults.DefaultTextbox,loadedDefaults.NPC_MEME,"?"],
+	["Talk",loadedDefaults.DefaultTextbox,loadedDefaults.NPC_MEME_ANGRY,"!"],
 	["Action","Return"]]
 	"""),None,endCondition = lambda f:1 )
+
+
+Grenade = Items.GameItems["Grenade"]()
+Grenade.pos = [300,250]
