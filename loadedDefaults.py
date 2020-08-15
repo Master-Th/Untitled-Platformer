@@ -1,9 +1,20 @@
 import pygame, Effects,loadedDefaults, Items
+from PIL import Image
 
 class spriteSheet:
 	def __init__(self,pyGLayer,sRes = [1920,1080],frmDims = [10,10]):
 		self.sRes = sRes
 		self.Sheet = pygame.image.load(pyGLayer)
+
+class Paralayer:
+	def __init__(self, pyGLayer, StartCoords, zoom, scrollPace):
+		self.sprite = pygame.image.load(pyGLayer)
+		self.init = StartCoords
+		self.zoom = zoom
+		self.pace = scrollPace
+		self.res = Image.open(pyGLayer).size
+
+
 		
 class Item(spriteSheet):
 	def __init__(self,pyGLayer,sRes = [1920,1080]):
