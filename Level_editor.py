@@ -1,22 +1,5 @@
-import threading, random, time, pyautogui, numpy as np, datetime, os
+import threading, random, time, pyautogui, numpy as np, datetime, os, pygame, easygui
 from PIL import Image
-
-from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-
-from PyQt5 import QtWidgets
-from PyQt5 import QtCore
-from PyQt5 import QtGui
-from PyQt5 import QtOpenGL
-
-def refresh2D(width, height):
-    glViewport(0, 0, width, height)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    glOrtho(0.0, width, 0.0, height, 0.0, 1.0)
-    glMatrixMode (GL_MODELVIEW)
-    glLoadIdentity()
 
 class Display:
 	def __init__(self):
@@ -29,49 +12,73 @@ class Display:
 		self.zoom = [50,50]
 		self.pos = [0,0]
 		self.dragPoint = 0
+
+		self.Window = pygame.display.set_mode(self.winDim)
 		
-		self.Processes =  [threading.Thread(target=i) for i in [self.glLoop]]
+		self.Processes =  [threading.Thread(target=i) for i in [self.Main,self.input]]
 		self.Finished = False
 
 		for Process in self.Processes:
 			Process.start()
 
-	def glLoop(self):
-		glutInit()
-		glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA | GLUT_DEPTH)
-		glutInitWindowSize(self.winDim[0],self.winDim[1])
-		glutInitWindowPosition(200,300)
-		window = glutCreateWindow("Level Editor")
-		glutDisplayFunc(self.draw)
-		glutMouseFunc(self.clicks)
-		glutKeyboardFunc(self.taptaps)
-		glutIdleFunc(self.draw)
-		glutMainLoop()
+	def Main(self):
+
+		while(True):
+			for event in pygame.event.get():
+				#print(event)
+				if(event.type == pygame.KEYDOWN):
+					if(event.key == pygame.K_ESCAPE):
+						pygame.quit()
+				elif(event.type == pygame.MOUSEBUTTONDOWN):
+					self.clicks(event.button,0,event.pos[0],event.pos[1])
+				elif(event.type == pygame.MOUSEMOTION):
+					if(pygame.mouse.get_pressed()[0]):
+						self.pos = [self.pos[i] - event.rel[1-i] for i in range(2)]
+
+
+			self.Window.fill((0,0,0,0))
+
+			pygame.draw.rect(self.Window,(255,255,255),[50,50,self.winDim[0]-100,self.winDim[1]-100])
+
+			for i in range(int(self.viewSpace[0]/self.zoom[0])+1):
+
+				offset = self.pos[1] % self.zoom[1]
+				pygame.draw.line(self.Window, (0,0,0,0),[50-offset+self.zoom[0]*i,50],[50-offset+self.zoom[0]*i,self.winDim[1]-50])
+
+			for i in range(int(self.viewSpace[1]/self.zoom[1])+1):
+
+				offset = self.pos[0] % self.zoom[0]
+				pygame.draw.line(self.Window, (0,0,0,0),[50,50-offset+self.zoom[1]*i],[self.winDim[0]-50,50-offset+self.zoom[1]*i])
+
+			for i,j in self.mapImage.items():
+				i = [int(u) for u in i.split("_")]
+				pygame.draw.rect(self.Window,(255,0,0),[i[1]*self.zoom[1] - self.pos[1], i[0]*self.zoom[0] - self.pos[0], self.zoom[0], self.zoom[1]])
+
+			pygame.display.update()
+
+
+		if(self.dragPoint):
+			self.pos = [self.pos[0] - self.dragPoint[1] + pyautogui.position().y, self.pos[1] + pyautogui.position().x - self.dragPoint[0]]
+			self.dragPoint = [pyautogui.position().x,pyautogui.position().y]
+			#print(self.pos)
 		
-	def rect(self, x, y, w, h):
-		glBegin(GL_QUADS)
-		glVertex2f(x,y)
-		glVertex2f(x+w,y)
-		glVertex2f(x+w,y+h)
-		glVertex2f(x,y+h)
-		glEnd()
-		
-	def line(self,x,y,X,Y):
-		glBegin(GL_LINES)
-		glVertex2f(x,y)
-		glVertex2f(X,Y)
-		glEnd()
-		
+
+		glColor3f(0.0,0.0,0.0)
+		for i in range(int(self.viewSpace[0]/self.zoom[0])+1):
+			offset = self.pos[0] % self.zoom[0]
+			self.line(50,50-offset+self.zoom[0]*i,self.winDim[0]-50,50-offset+self.zoom[0]*i)
+
 	def clicks(self,button,state,x,y):
-		print(button,state,x,y)
-		if(button == 0):
-			if(state == 0):	self.dragPoint = pyautogui.position()
+		#print(button,state,x,y)
+		if(button == 1):
+			if(state == 0):
+				self.dragPoint = pyautogui.position()
 			else:
 				self.dragPoint = 0
-		elif(button == 1): self.zoom = [50,50]
-		elif(button == 2):
+		elif(button == 2): self.zoom = [50,50]
+		elif(button == 3):
 			if(state == 0):
-				name_X = (self.winDim[1]-(-1*self.pos[0]+y))/self.zoom[1]
+				name_X = ((self.pos[0]+y))/self.zoom[1]
 				if(name_X <= 0): name_X -= 1
 				name_X = int(name_X)
 
@@ -82,43 +89,16 @@ class Display:
 			print(self.mapImage)
 		elif(button == 3): self.zoom = [int(i * 19.0/20.0) for i in self.zoom]
 		elif(button == 4): self.zoom = [int(i * 20.0/19.0) for i in self.zoom]
-			
-			
-	def taptaps(self,Key,x,y):
-		print(Key)
-		if(Key == b's'):
-			self.save()
-		
-	def draw(self):
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-		glLoadIdentity()
-		
-		if(self.dragPoint):
-			self.pos = [self.pos[0] - self.dragPoint[1] + pyautogui.position().y, self.pos[1] - pyautogui.position().x + self.dragPoint[0]]
-			self.dragPoint = [pyautogui.position().x,pyautogui.position().y]
-			print(self.pos)
-		refresh2D(self.winDim[0],self.winDim[1])
-		glColor3f(1.0,1.0,1.0)
-		self.rect(50,50,self.winDim[0]-100,self.winDim[1]-100)
-		glColor3f(0.0,0.0,0.0)
-		for i in range(int(self.viewSpace[0]/self.zoom[0])+1):
-			offset = self.pos[0] % self.zoom[0]
-			self.line(50,50-offset+self.zoom[0]*i,self.winDim[0]-50,50-offset+self.zoom[0]*i)
 
-		
-		for i in range(int(self.viewSpace[1]/self.zoom[1])+1):
-			offset = self.pos[1] % self.zoom[1]
-			self.line(50-offset+self.zoom[1]*i,50,50-offset+self.zoom[1]*i,self.winDim[1]-50)
-			
-			
-		glColor3f(1.0,0.0,0.0)
-		for i,j in self.mapImage.items():
-			i = [int(u) for u in i.split("_")]
-			self.rect(i[1]*self.zoom[1] - self.pos[1], i[0]*self.zoom[0] - self.pos[0], self.zoom[0], self.zoom[1])
-			
+	def input(self):
+		while(True):
+			Command = easygui.textbox(msg='', title='Enter options', text='', codebox=False, callback=None, run=True).split(" ")
+			if(Command[0] == "Texture_Set"):
+				try: 
+					Command[1] = str(int(Command[1]))
+					self.Textures[Command[1]] = pygame.image.load("./sprites/" + Command[2])
+				except Exception as E:
 
-		
-		glutSwapBuffers()
 
 	def save(self):
 		X_Range = [None,None]
@@ -158,4 +138,5 @@ class Display:
 		
 			
 		open("Saved_Map_"+str(),'w').write(str(map_Form))
+
 Display()
